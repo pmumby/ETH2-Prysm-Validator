@@ -1,0 +1,64 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: "prysm-prometheus"
+  labels:
+    {{- include "prysm-node.prometheusLabels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.prometheusConfig.replicaCount }}
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      {{- include "prysm-node.prometheusSelectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "prysm-node.prometheusSelectorLabels" . | nindent 8 }}
+    spec:
+    {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+    {{- end }}
+      serviceAccountName: {{ include "prysm-node.serviceAccountName" . }}
+      securityContext:
+        runAsUser: 0
+      volumes:
+        - name: prometheus-data
+          persistentVolumeClaim:
+            claimName: "prysm-prometheus"
+        - name: prometheus-config
+          configMap:
+            name: "prysm-prometheus-config"
+      containers:
+        - name: "{{ .Chart.Name }}-prometheus"
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.prometheusConfig.image.repository }}"
+          imagePullPolicy: {{ .Values.prometheusConfig.image.pullPolicy }}
+          args:
+          - --config.file={{ .Values.prometheusConfig.configPath }}/prometheus.yml
+          - --storage.tsdb.retention.time=31d
+          ports:
+            - name: prometheus
+              containerPort: {{ .Values.prometheusConfig.listenPort }}
+              protocol: TCP
+          volumeMounts:
+            - mountPath: {{ .Values.prometheusConfig.dataPath }}
+              name: prometheus-data
+            - mountPath: {{ .Values.prometheusConfig.configPath }}
+              name: prometheus-config
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+    {{- end }}
+    {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+    {{- end }}

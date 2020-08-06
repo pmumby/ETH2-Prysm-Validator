@@ -1,0 +1,71 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: "prysm-beacon"
+  labels:
+    {{- include "prysm-node.beaconLabels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.beaconConfig.replicaCount }}
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      {{- include "prysm-node.beaconSelectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "prysm-node.beaconSelectorLabels" . | nindent 8 }}
+    spec:
+    {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+    {{- end }}
+      serviceAccountName: {{ include "prysm-node.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      volumes:
+        - name: beacon-data
+          persistentVolumeClaim:
+            claimName: "prysm-beacon"
+      containers:
+        - name: "{{ .Chart.Name }}-beacon"
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.beaconConfig.image.repository }}"
+          imagePullPolicy: {{ .Values.beaconConfig.image.pullPolicy }}
+          volumeMounts:
+            - mountPath: {{ .Values.beaconConfig.dataPath }}
+              name: beacon-data
+          args:
+          - --datadir={{ .Values.beaconConfig.dataPath }}
+          - --rpc-host=0.0.0.0
+          - --monitoring-host=0.0.0.0
+          - --monitoring-port={{ .Values.beaconConfig.statsPort }}
+          - --p2p-tcp-port={{ .Values.beaconConfig.beaconPort }}
+          - --p2p-host-dns={{ .Values.beaconConfig.advertiseP2PHost }}
+          - --p2p-max-peers={{ .Values.beaconConfig.maxPeers }}
+          - --http-web3provider={{ .Values.beaconConfig.web3ProviderURL }}
+          ports:
+            - name: rpc
+              containerPort: {{ .Values.beaconConfig.rpcPort }}
+              protocol: TCP
+            - name: beacon
+              containerPort: {{ .Values.beaconConfig.beaconPort }}
+              protocol: TCP
+            - name: stats
+              containerPort: {{ .Values.beaconConfig.statsPort }}
+              protocol: TCP
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+    {{- end }}
+    {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+    {{- end }}

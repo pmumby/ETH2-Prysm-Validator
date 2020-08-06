@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: "prysm-grafana-datasources-config"
+  labels:
+    {{- include "prysm-node.labels" . | nindent 4 }}
+data:
+  prometheus.yml: |-
+    datasources:
+      - name: Prometheus
+        type: prometheus
+        url: http://prysm-prometheus:{{ .Values.prometheusConfig.listenPort }}

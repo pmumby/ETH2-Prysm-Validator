@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: "prysm-validator"
+  labels: {{- include "prysm-node.labels" . | nindent 4 }}
+spec:
+  accessModes:
+    - ReadWriteOnce
+  {{- if .Values.validatorConfig.volume.storageClass }}
+  storageClassName: {{ .Values.validatorConfig.volume.storageClass }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.validatorConfig.volume.size }}

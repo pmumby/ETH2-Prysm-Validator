@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: "prysm-beacon"
+  labels:
+    {{- include "prysm-node.beaconLabels" . | nindent 4 }}
+spec:
+  type: LoadBalancer
+  ports:
+    - port: {{ .Values.beaconConfig.beaconPort }}
+      targetPort: {{ .Values.beaconConfig.beaconPort }}
+      protocol: TCP
+      name: beacon
+  selector:
+    {{- include "prysm-node.beaconSelectorLabels" . | nindent 4 }}

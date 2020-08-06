@@ -1,0 +1,61 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: "prysm-statsnode"
+  labels:
+    {{- include "prysm-node.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.statsConfig.replicaCount }}
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      {{- include "prysm-node.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "prysm-node.selectorLabels" . | nindent 8 }}
+    spec:
+    {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+    {{- end }}
+      serviceAccountName: {{ include "prysm-node.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      volumes:
+        - name: stats-data
+          persistentVolumeClaim:
+            claimName: "prysm-stats"
+      containers:
+        - name: "{{ .Chart.Name }}-stats"
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.statsConfig.image.repository }}"
+          imagePullPolicy: {{ .Values.statsConfig.image.pullPolicy }}
+          args:
+          - run
+          - --eth2stats.node-name={{ .Values.statsConfig.nodeName }}
+          - --data.folder={{ .Values.statsConfig.dataPath | quote }}
+          - --eth2stats.addr={{ .Values.statsConfig.eth2StatsAddr }}
+          - --eth2stats.tls={{ .Values.statsConfig.eth2StatsTLS }}
+          - --beacon.type={{ .Values.statsConfig.beaconType }}
+          - --beacon.addr=prysm-rpc:{{ .Values.beaconConfig.rpcPort }}
+          - "--beacon.metrics-addr=http://prysm-stats:{{ .Values.beaconConfig.statsPort }}/metrics"
+          volumeMounts:
+            - mountPath: {{ .Values.statsConfig.dataPath }}
+              name: stats-data
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+    {{- end }}
+    {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+    {{- end }}

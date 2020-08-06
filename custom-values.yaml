@@ -1,0 +1,65 @@
+# These are the custom values most often required to be setup for a new Prysm Installation from this helm chart.
+# If you require additional customization, please see the main values.yaml in the chart itself.
+
+# Increment deployTag to some unique value to force re-deploy of resources when upgrading/updating. You may not need this.
+# Can also be overridden with helm commandline flags
+deployTag: default
+
+# If you should require to put docker images in a private repository, and require custom image pull secrets, define them here:
+#imagePullSecrets:
+#  - name: registry-secret
+
+# Setup the web3ProviderURL to be your own infura with api key.
+# advertiseP2PHost is the public full hostname that will be exposed to the beacon node (ie: it hits your load balancers etc, and is usable by the ingress controller)
+# maxPeers controlls the max peers setting for the beacon node. More = better connection but possibly higher load
+# volume.storageClass is optional, but if it's set, it will define which PVC provisioner class will provide the persistent storage volumes.
+# volume.size is how much persistent storage to provision for the beacon 
+beaconConfig:
+  web3ProviderURL: https://goerli.infura.io/v3/MYAPIKEYHERE
+  advertiseP2PHost: beacon.mydomain.com
+  maxPeers: 120
+  volume:
+    storageClass: null
+    size: 10Gi
+
+# For the validator, set graffiti to be whatever you like.
+# And volume config behaves the same as the beacon. Validator doesn't need a lot of disk, only storage for keys/wallets etc.
+validatorConfig:
+  graffiti: "ORB0-HELM"
+  volume:
+    storageClass: null
+    size: 100Mi
+
+# The stats node is the eth2stats.io client that lets your node report metrics to that public dashboard
+# eth2StatsAddr should be set to the appropriate endpoint (depending on which network you're running on). See eth2stats.io for more details
+# nodeName is the name you wish to appear in the listing on eth2stats.io
+# volume works the same as previous sections
+statsConfig:
+  eth2StatsAddr: grpc.medalla.eth2stats.io:443
+  nodeName: Orb0-Helm-CHANGEME!
+  volume:
+    storageClass: null
+    size: 5Gi
+
+# These defaults should be fine for prometheus. But storage may need to be increased if you have a lot of validators, or the node runs a long time.
+prometheusConfig:
+  volume:
+    storageClass: null
+    size: 5Gi
+
+# The Grafana config exposes a TLS endpoint, so you'll need to configure this with appropriate values if you wish to access your grafana dashboard from the internet.
+# It needs a host name, and optionally, you can specify tls config, ingress controller class, etc.
+# Optionally, if you don't wish to expose grafana, you can simply remove the ingress section and it will be disabled.
+grafanaConfig:
+  ingress:
+    hostname: validator-dashboard.mydomain.com
+    #annotations:
+      #kubernetes.io/ingress.class: "traefik"
+      #cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    #tls:
+      #- secretName: validator-dashboard-tls
+        #hosts:
+          #- validator-dashboard.mydomain.com
+  volume:
+    storageClass: null
+    size: 1Gi

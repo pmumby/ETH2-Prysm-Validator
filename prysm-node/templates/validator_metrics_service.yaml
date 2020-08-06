@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: "prysm-validator-metrics"
+  labels:
+    {{- include "prysm-node.validatorLabels" . | nindent 4 }}
+spec:
+  ports:
+    - port: {{ .Values.validatorConfig.statsPort }}
+      targetPort: {{ .Values.validatorConfig.statsPort }}
+      protocol: TCP
+      name: metrics
+  selector:
+    {{- include "prysm-node.validatorSelectorLabels" . | nindent 4 }}

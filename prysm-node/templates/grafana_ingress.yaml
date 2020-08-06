@@ -1,0 +1,30 @@
+{{- if .Values.grafanaConfig.ingress }}
+kind: Ingress
+apiVersion: extensions/v1beta1
+metadata:
+  name: "prysm-grafana"
+  labels: {{- include "prysm-node.grafanaLabels" . | nindent 4 }}
+  {{- with .Values.grafanaConfig.ingress.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+{{- if .Values.grafanaConfig.ingress.tls }}
+  tls:
+  {{- range .Values.grafanaConfig.ingress.tls }}
+    - hosts:
+      {{- range .hosts }}
+        - {{ . | quote }}
+      {{- end }}
+      secretName: {{ .secretName }}
+  {{- end }}
+{{- end }}
+  rules:
+    - host: {{ .Values.grafanaConfig.ingress.hostname }}
+      http:
+        paths:
+          - path: /
+            backend:
+              serviceName: "prysm-grafana"
+              servicePort: {{ .Values.grafanaConfig.listenPort }}
+{{- end }}

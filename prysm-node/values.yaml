@@ -1,0 +1,128 @@
+# Default values for prysm-node.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+deploymentStrategy: Recreate
+
+deployTag: default
+
+beaconConfig:
+  replicaCount: 1
+  image:
+    repository: gcr.io/prysmaticlabs/prysm/beacon-chain:latest
+    pullPolicy: Always
+  rpcPort: 4000
+  beaconPort: 13000
+  statsPort: 8080
+  web3ProviderURL: https://goerli.infura.io/v3/MYAPIKEYHERE
+  advertiseP2PHost: beacon.mydomain.com
+  maxPeers: 120
+  name: "beacon-node"
+  dataPath: "/data"
+  volume:
+    storageClass: null
+    size: 10Gi
+
+validatorConfig:
+  replicaCount: 1
+  initImage:
+    repository: gcr.io/prysmaticlabs/prysm/validator:latest
+    pullPolicy: Always
+  image:
+    repository: gcr.io/prysmaticlabs/prysm/validator:latest
+    pullPolicy: Always
+  keyPath: "/keys"
+  passwordPath: "/passwords"
+  dataPath: "/data"
+  graffiti: "ORB0"
+  statsPort: 8081
+  volume:
+    storageClass: null
+    size: 100Mi
+
+statsConfig:
+  replicaCount: 1
+  image:
+    repository: alethio/eth2stats-client:latest
+    pullPolicy: Always
+  eth2StatsAddr: grpc.medalla.eth2stats.io:443
+  eth2StatsTLS: true
+  name: "stats-node"
+  beaconType: prysm
+  nodeName: Orb0
+  dataPath: "/data"
+  volume:
+    storageClass: null
+    size: 5Gi
+
+prometheusConfig:
+  replicaCount: 1
+  image:
+    repository: prom/prometheus:latest
+    pullPolicy: Always
+  listenPort: 9090
+  dataPath: "/prometheus"
+  configPath: "/etc/prometheus"
+  volume:
+    storageClass: null
+    size: 5Gi
+
+grafanaConfig:
+  replicaCount: 1
+  image:
+    repository: grafana/grafana:latest
+    pullPolicy: Always
+  listenPort: 3000
+  ingress: 
+    {}
+  dataPath: "/var/lib/grafana"
+  datasourcesPath: "/etc/grafana/provisioning/datasources"
+  dashboardProvidersPath: "/etc/grafana/provisioning/dashboards"
+  dashboardsPath: "/var/lib/grafana/dashboards"
+  dashboardBaseURL: "https://raw.githubusercontent.com/GuillaumeMiralles/prysm-grafana-dashboard/master/"
+  dashboardFile: "less_10_validators.json"
+  volume:
+    storageClass: null
+    size: 1Gi
+
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  # Specifies whether a service account should be created
+  create: true
+  # The name of the service account to use.
+  # If not set and create is true, a name is generated using the fullname template
+  name:
+
+podSecurityContext:
+  {}
+  # fsGroup: 2000
+
+securityContext:
+  {}
+  # capabilities:
+  #   drop:
+  #   - ALL
+  # readOnlyRootFilesystem: true
+  # runAsNonRoot: true
+  # runAsUser: 1000
+
+resources:
+  {}
+  # We usually recommend not to specify default resources and to leave this as a conscious
+  # choice for the user. This also increases chances charts run on environments with little
+  # resources, such as Minikube. If you do want to specify resources, uncomment the following
+  # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
+  # limits:
+  #   cpu: 100m
+  #   memory: 128Mi
+  # requests:
+  #   cpu: 100m
+  #   memory: 128Mi
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}

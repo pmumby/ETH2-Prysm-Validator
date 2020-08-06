@@ -1,0 +1,91 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: "prysm-validator"
+  labels:
+    {{- include "prysm-node.validatorLabels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.validatorConfig.replicaCount }}
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      {{- include "prysm-node.validatorSelectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "prysm-node.validatorSelectorLabels" . | nindent 8 }}
+    spec:
+    {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+    {{- end }}
+      serviceAccountName: {{ include "prysm-node.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      volumes:
+        - name: validator-data
+          persistentVolumeClaim:
+            claimName: "prysm-validator"
+        - name: validator-keys
+          secret:
+            secretName: "validator-keys"
+        - name: validator-passwords
+          secret:
+            secretName: "validator-passwords"
+      initContainers:
+        - name: "{{ .Chart.Name }}-validator-init"
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.validatorConfig.initImage.repository }}"
+          imagePullPolicy: {{ .Values.validatorConfig.initImage.pullPolicy }}
+          args:
+          - accounts-v2
+          - import
+          - --keys-dir={{ .Values.validatorConfig.keyPath }}
+          - --wallet-dir={{ .Values.validatorConfig.dataPath }}
+          - --wallet-password-file={{ .Values.validatorConfig.passwordPath }}/password.txt
+          - --account-password-file={{ .Values.validatorConfig.passwordPath }}/password.txt
+          - --passwords-dir={{ .Values.validatorConfig.passwordPath }}
+          volumeMounts:
+            - mountPath: {{ .Values.validatorConfig.dataPath }}
+              name: validator-data
+            - mountPath: {{ .Values.validatorConfig.keyPath }}
+              name: validator-keys
+            - mountPath: {{ .Values.validatorConfig.passwordPath }}
+              name: validator-passwords
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+      containers:
+        - name: "{{ .Chart.Name }}-validator"
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.validatorConfig.image.repository }}"
+          imagePullPolicy: {{ .Values.validatorConfig.image.pullPolicy }}
+          args:
+          - --wallet-dir={{ .Values.validatorConfig.dataPath }}
+          - --wallet-password-file={{ .Values.validatorConfig.passwordPath }}/password.txt
+          - --passwords-dir={{ .Values.validatorConfig.passwordPath }}
+          - --graffiti={{ .Values.validatorConfig.graffiti }}
+          - --beacon-rpc-provider=prysm-rpc:{{ .Values.beaconConfig.rpcPort }}
+          - --monitoring-host=0.0.0.0
+          - --monitoring-port={{ .Values.validatorConfig.statsPort }}
+          volumeMounts:
+            - mountPath: {{ .Values.validatorConfig.dataPath }}
+              name: validator-data
+            - mountPath: {{ .Values.validatorConfig.passwordPath }}
+              name: validator-passwords
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+    {{- end }}
+    {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+    {{- end }}

@@ -1,0 +1,82 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: "prysm-grafana"
+  labels:
+    {{- include "prysm-node.grafanaLabels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.grafanaConfig.replicaCount }}
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      {{- include "prysm-node.grafanaSelectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "prysm-node.grafanaSelectorLabels" . | nindent 8 }}
+    spec:
+    {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+    {{- end }}
+      serviceAccountName: {{ include "prysm-node.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      volumes:
+        - name: grafana-data
+          persistentVolumeClaim:
+            claimName: "prysm-grafana"
+        - name: grafana-datasources-config
+          configMap:
+            name: "prysm-grafana-datasources-config"
+        - name: grafana-dashboard-config
+          configMap:
+            name: "prysm-grafana-dashboard-config"
+      initContainers:
+        - name: "{{ .Chart.Name }}-grafana-init"
+          securityContext:
+            runAsUser: 0
+          image: "{{ .Values.grafanaConfig.image.repository }}"
+          imagePullPolicy: {{ .Values.grafanaConfig.image.pullPolicy }}
+          command: 
+          - bash
+          args:
+          - -c
+          - "mkdir -p {{ .Values.grafanaConfig.dashboardsPath }} ; wget {{ .Values.grafanaConfig.dashboardBaseURL }}/{{ .Values.grafanaConfig.dashboardFile }} -O {{ .Values.grafanaConfig.dashboardsPath }}/{{ .Values.grafanaConfig.dashboardFile }} ; chown -R grafana:grafana {{ .Values.grafanaConfig.dataPath }}"
+          volumeMounts:
+            - mountPath: {{ .Values.grafanaConfig.dataPath }}
+              name: grafana-data
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+      containers:
+        - name: "{{ .Chart.Name }}-grafana"
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.grafanaConfig.image.repository }}"
+          imagePullPolicy: {{ .Values.grafanaConfig.image.pullPolicy }}
+          ports:
+            - name: grafana
+              containerPort: {{ .Values.grafanaConfig.listenPort }}
+              protocol: TCP
+          volumeMounts:
+            - mountPath: {{ .Values.grafanaConfig.dataPath }}
+              name: grafana-data
+            - mountPath: {{ .Values.grafanaConfig.datasourcesPath }}
+              name: grafana-datasources-config
+            - mountPath: {{ .Values.grafanaConfig.dashboardProvidersPath }}
+              name: grafana-dashboard-config
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+    {{- end }}
+    {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+    {{- end }}

@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: "prysm-stats"
+  labels:
+    {{- include "prysm-node.beaconLabels" . | nindent 4 }}
+spec:
+  ports:
+    - port: {{ .Values.beaconConfig.statsPort }}
+      targetPort: {{ .Values.beaconConfig.statsPort }}
+      protocol: TCP
+      name: stats
+  selector:
+    {{- include "prysm-node.beaconSelectorLabels" . | nindent 4 }}
